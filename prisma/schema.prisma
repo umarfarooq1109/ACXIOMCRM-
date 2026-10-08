@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String            @id @default(uuid())
+  name               String
+  email              String            @unique
+  phone              String?           @unique
+  passwordHash       String
+  role               String            @default("SalesExecutive") // Admin, Manager, SalesExecutive
+  isActive           Boolean           @default(true)
+  failedLoginCount   Int               @default(0)
+  lockoutEnd         DateTime?
+  mustChangePassword Boolean           @default(false)
+  lastLoginAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  passwordHistory    PasswordHistory[]
+  auditLogs          AuditLog[]
+  customersOwned     Customer[]        @relation("CustomerOwner")
+  leadsAssigned      Lead[]            @relation("LeadAssigned")
+  opportunitiesOwned Opportunity[]     @relation("OpportunityAssigned")
+  followUpsAssigned  FollowUp[]        @relation("FollowUpAssigned")
+  activitiesAssigned Activity[]        @relation("ActivityAssigned")
+}
+
+model PasswordHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id           String        @id @default(uuid())
+  customerCode String        @unique // Format: CUS-000123
+  customerName String
+  email        String        @unique
+  phone        String        @unique
+  companyName  String
+  address      String?
+  city         String
+  state        String
+  status       String        @default("Active") // Active, Inactive, Prospect
+  notes        String?
+  createdAt    DateTime      @default(now())
+  createdBy    String
+  modifiedAt   DateTime      @updatedAt
+  modifiedBy   String
+  ownerId      String
+  owner        User          @relation("CustomerOwner", fields: [ownerId], references: [id])
+  leads        Lead[]
+  opportunities Opportunity[]
+  followUps    FollowUp[]
+  activities   Activity[]
+
+  @@index([customerName])
+  @@index([companyName])
+  @@index([status])
+  @@index([ownerId])
+  @@index([city])
+  @@index([createdAt])
+}
+
+model Lead {
+  id            String        @id @default(uuid())
+  leadCode      String        @unique // LED-000123
+  leadName      String
+  email         String
+  phone         String
+  companyName   String
+  source        String        @default("Website")
+  status        String        @default("New")
+  priority      String        @default("Medium")
+  expectedValue Float         @default(0)
+  notes         String?
+  createdDate   DateTime      @default(now())
+  assignedToId  String
+  assignedTo    User          @relation("LeadAssigned", fields: [assignedToId], references: [id])
+  customerId    String?
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  opportunities Opportunity[]
+  followUps     FollowUp[]
+  activities    Activity[]
+}
+
+model Opportunity {
+  id                String     @id @default(uuid())
+  opportunityName   String
+  customerId        String
+  customer          Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  leadId            String?
+  lead              Lead?      @relation(fields: [leadId], references: [id])
+  amount            Float
+  stage             String     @default("Qualification")
+  probability       Int        @default(20)
+  expectedCloseDate DateTime
+  status            String     @default("Open")
+  notes             String?
+  createdDate       DateTime   @default(now())
+  assignedToId      String
+  assignedTo        User       @relation("OpportunityAssigned", fields: [assignedToId], references: [id])
+  followUps         FollowUp[]
+  activities        Activity[]
+}
+
+model FollowUp {
+  id            String       @id @default(uuid())
+  followUpDate  DateTime
+  subject       String
+  followUpType  String       @default("Call")
+  status        String       @default("Planned")
+  remarks       String?
+  assignedToId  String
+  assignedTo    User         @relation("FollowUpAssigned", fields: [assignedToId], references: [id])
+  customerId    String?
+  customer      Customer?    @relation(fields: [customerId], references: [id])
+  leadId        String?
+  lead          Lead?        @relation(fields: [leadId], references: [id])
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  createdDate   DateTime     @default(now())
+}
+
+model Activity {
+  id           String       @id @default(uuid())
+  activityType String
+  subject      String
+  description  String?
+  activityDate DateTime     @default(now())
+  status       String       @default("Completed")
+  assignedToId String
+  assignedTo   User         @relation("ActivityAssigned", fields: [assignedToId], references: [id])
+  customerId   String?
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+  leadId       String?
+  lead         Lead?        @relation(fields: [leadId], references: [id])
+  opportunityId String?
+  opportunity  Opportunity? @relation(fields: [opportunityId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  entityName  String
+  recordId    String?
+  oldValue    String?
+  newValue    String?
+  result      String   @default("Success")
+  ipAddress   String?
+  userAgent   String?
+  createdDate DateTime @default(now())
+}
