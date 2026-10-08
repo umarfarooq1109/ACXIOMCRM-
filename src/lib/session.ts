@@ -60,6 +60,15 @@ export async function getSession(): Promise<UserSessionPayload | null> {
   return verifySessionToken(token);
 }
 
+export async function getSessionUser() {
+  const session = await getSession();
+  if (!session) {
+    const { AppError } = await import("@/lib/errors");
+    throw new AppError("Authentication token is invalid or missing.", 401);
+  }
+  return session;
+}
+
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.delete("acxiom_session");

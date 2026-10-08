@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Eye, EyeOff, ShieldCheck, Users, TrendingUp, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Users, TrendingUp, AlertCircle, Key, UserCheck, Shield } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -19,8 +19,15 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (eEmail?: string, ePassword?: string) => {
+    const loginEmail = eEmail || email;
+    const loginPassword = ePassword || password;
+
+    if (!loginEmail || !loginPassword) {
+      setErrorMessage("Please enter both email and password.");
+      return;
+    }
+
     setErrorMessage("");
     setIsLoading(true);
 
@@ -28,7 +35,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
 
       const data = await res.json();
@@ -47,8 +54,14 @@ function LoginForm() {
     }
   };
 
+  const handleDemoFill = (dEmail: string, dPass: string) => {
+    setEmail(dEmail);
+    setPassword(dPass);
+    handleLogin(dEmail, dPass);
+  };
+
   return (
-    <div className="max-w-md w-full mx-auto space-y-8">
+    <div className="max-w-md w-full mx-auto space-y-6">
       <div>
         <Logo />
         <h1 className="text-2xl font-bold text-slate-800 tracking-tight mt-6">
@@ -59,6 +72,54 @@ function LoginForm() {
         </p>
       </div>
 
+      {/* Quick Demo Login Widget */}
+      <div className="p-3.5 bg-teal-50/80 border border-teal-200 rounded-xl space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-[#0D9488]">
+          <Key className="w-3.5 h-3.5" />
+          <span>Quick 1-Click Demo Login</span>
+        </div>
+        <p className="text-[11px] text-slate-600">
+          Select any system role to sign in instantly with pre-configured demo credentials:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => handleDemoFill("admin@acxiomcrm.com", "Admin@123456")}
+            className="px-2.5 py-1.5 bg-white hover:bg-teal-100/70 border border-teal-300 rounded-lg text-left transition-colors text-xs font-semibold text-slate-800 flex items-center gap-1.5"
+          >
+            <Shield className="w-3.5 h-3.5 text-violet-600" />
+            <div className="truncate">
+              <div className="text-[11px] leading-tight font-bold text-slate-800">Admin</div>
+              <div className="text-[9px] text-slate-500 truncate">Full System</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDemoFill("manager@acxiomcrm.com", "Manager@123456")}
+            className="px-2.5 py-1.5 bg-white hover:bg-teal-100/70 border border-teal-300 rounded-lg text-left transition-colors text-xs font-semibold text-slate-800 flex items-center gap-1.5"
+          >
+            <UserCheck className="w-3.5 h-3.5 text-sky-600" />
+            <div className="truncate">
+              <div className="text-[11px] leading-tight font-bold text-slate-800">Manager</div>
+              <div className="text-[9px] text-slate-500 truncate">Team Pipeline</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDemoFill("sales@acxiomcrm.com", "SalesExec@123456")}
+            className="px-2.5 py-1.5 bg-white hover:bg-teal-100/70 border border-teal-300 rounded-lg text-left transition-colors text-xs font-semibold text-slate-800 flex items-center gap-1.5"
+          >
+            <Users className="w-3.5 h-3.5 text-teal-600" />
+            <div className="truncate">
+              <div className="text-[11px] leading-tight font-bold text-slate-800">Sales Exec</div>
+              <div className="text-[9px] text-slate-500 truncate">Own Records</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {errorMessage && (
         <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3 text-xs text-rose-800">
           <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
@@ -66,7 +127,13 @@ function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleLogin();
+        }}
+        className="space-y-4"
+      >
         <Input
           label="Email Address"
           type="email"
@@ -130,13 +197,13 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col md:flex-row">
-      <div className="flex-1 flex flex-col justify-center px-8 py-12 md:px-16 lg:px-24 bg-white">
+      <div className="flex-1 flex flex-col justify-center px-4 py-8 sm:px-8 md:px-12 lg:px-20 bg-white">
         <Suspense fallback={<div className="text-xs text-slate-400 text-center">Loading login form...</div>}>
           <LoginForm />
         </Suspense>
       </div>
 
-      <div className="hidden md:flex flex-1 bg-[#F0FDFA] border-l border-[#CCFBF1] p-12 flex-col justify-between">
+      <div className="hidden md:flex flex-1 bg-[#F0FDFA] border-l border-[#CCFBF1] p-8 lg:p-12 flex-col justify-between">
         <div>
           <Logo />
           <h2 className="text-xl font-bold text-slate-800 mt-8 tracking-tight">

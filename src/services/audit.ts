@@ -52,6 +52,60 @@ export async function recordAuditLog(params: CreateAuditLogParams) {
   }
 }
 
+export async function getAuditLogs(
+  userCtx: { role: string },
+  params: { page?: number; limit?: number; entityName?: string; action?: string; search?: string }
+) {
+  if (userCtx.role !== "Admin" && userCtx.role !== "Manager") {
+    const { AppError } = await import("@/lib/errors");
+    throw new AppError("Forbidden. Audit log review requires Manager or Admin authorization.", 403);
+  }
+
+  const page = Math.max(1, params.page || 1);
+  const limit = Math.min(100, Math.max(1, params.limit || 20));
+  const skip = (page - 1) * limit;
+
+  const andConditions: any[] = [];
+  if (params.entityName) andConditions.push({ entityName: params.entityName });
+  if (params.action) andConditions.push({ action: params.action });
+  if (params.search) {
+    const q = params.search.trim();
+    andConditions.push({
+      OR: [
+        { action: { contains: q } },
+        { entityName: { contains: q } },
+        { recordId: { contains: q } },
+        { user: { name: { contains: q } } },
+      ],
+    });
+  }
+
+  const where = andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const [total, logs] = await Promise.all([
+    prisma.auditLog.count({ where }),
+    prisma.auditLog.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdDate: "desc" },
+      include: {
+        user: { select: { id: true, name: true, email: true, role: true } },
+      },
+    }),
+  ]);
+
+  return {
+    data: logs,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
 function redactSensitiveFields(obj: any): any {
   if (!obj || typeof obj !== "object") return obj;
   const clone = Array.isArray(obj) ? [...obj] : { ...obj };

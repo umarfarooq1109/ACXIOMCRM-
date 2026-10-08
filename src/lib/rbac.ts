@@ -1,3 +1,5 @@
+import { AppError } from "@/lib/errors";
+
 export type UserRole = "Admin" | "Manager" | "SalesExecutive";
 
 export type Resource =
@@ -8,7 +10,9 @@ export type Resource =
   | "activities"
   | "users"
   | "audit"
-  | "reports";
+  | "reports"
+  | "ownerId"
+  | "assignedToId";
 
 export type Action =
   | "read"
@@ -27,7 +31,7 @@ export interface UserContext {
 }
 
 // Single Permission Matrix Definition
-const PERMISSION_MATRIX: Record<UserRole, Record<Resource, Action[]>> = {
+const PERMISSION_MATRIX: Record<UserRole, Record<string, Action[]>> = {
   Admin: {
     customers: ["read", "create", "update", "delete", "assign", "convert", "export", "administer"],
     leads: ["read", "create", "update", "delete", "assign", "convert", "export", "administer"],
@@ -70,6 +74,12 @@ export function can(
   return allowedActions.includes(action);
 }
 
+export function requireRole(userCtx: UserContext, allowedRoles: UserRole[]) {
+  if (!userCtx || !allowedRoles.includes(userCtx.role)) {
+    throw new AppError("Access denied: You do not have permission to perform this action.", 403);
+  }
+}
+
 export function isOwnerOrAdmin(user: UserContext, recordOwnerId: string): boolean {
   if (user.role === "Admin" || user.role === "Manager") return true;
   return user.id === recordOwnerId;
@@ -83,13 +93,20 @@ export function getScopeWhereClause(user: UserContext, resource: Resource): Reco
     return {};
   }
 
-  // SalesExecutive limited to records owned by or assigned to them
-  if (resource === "customers") {
+  if (resource === "customers" || resource === "ownerId") {
     return { ownerId: user.id };
   }
-  if (resource === "leads" || resource === "opportunities" || resource === "followups" || resource === "activities") {
+  if (
+    resource === "leads" ||
+    resource === "opportunities" ||
+    resource === "followups" ||
+    resource === "activities" ||
+    resource === "assignedToId"
+  ) {
     return { assignedToId: user.id };
   }
 
   return {};
 }
+
+export const getScopedWhereClause = getScopeWhereClause;

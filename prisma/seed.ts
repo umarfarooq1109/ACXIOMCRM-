@@ -440,7 +440,122 @@ async function main() {
     });
   }
 
-  console.log("Seeded 25 Indian enterprise customers successfully!");
+  console.log("Seeding Leads...");
+  const firstCustomer = await prisma.customer.findFirst({ where: { customerCode: "CUS-000001" } });
+
+  const seedLeads = [
+    {
+      leadCode: "LED-000001",
+      leadName: "Vijay Mallya",
+      email: "vijay@unitedspirits.in",
+      phone: "9876500001",
+      companyName: "United Spirits Ltd",
+      source: "Website",
+      status: "Qualified",
+      priority: "High",
+      expectedValue: 1200000,
+      assignedToId: sales.id,
+      notes: "High value enterprise enquiry.",
+    },
+    {
+      leadCode: "LED-000002",
+      leadName: "Karan Johar",
+      email: "karan@dharma.in",
+      phone: "9876500002",
+      companyName: "Dharma Productions",
+      source: "Referral",
+      status: "New",
+      priority: "Medium",
+      expectedValue: 450000,
+      assignedToId: manager.id,
+      notes: "Media & entertainment CRM software request.",
+    },
+    {
+      leadCode: "LED-000003",
+      leadName: "Aditi Rao",
+      email: "aditi@nykaa.com",
+      phone: "9876500003",
+      companyName: "FSN E-Commerce (Nykaa)",
+      source: "LinkedIn",
+      status: "Contacted",
+      priority: "High",
+      expectedValue: 850000,
+      assignedToId: sales.id,
+      notes: "Beauty retail customer support integration.",
+    },
+  ];
+
+  for (const l of seedLeads) {
+    await prisma.lead.upsert({
+      where: { leadCode: l.leadCode },
+      update: {},
+      create: l,
+    });
+  }
+
+  console.log("Seeding Opportunities...");
+  if (firstCustomer) {
+    const seedOpps = [
+      {
+        opportunityName: "TCS Enterprise License Expansion",
+        customerId: firstCustomer.id,
+        amount: 2500000,
+        stage: "Negotiation",
+        probability: 80,
+        expectedCloseDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        status: "Open",
+        assignedToId: sales.id,
+        notes: "Final legal review of SLA agreement.",
+      },
+      {
+        opportunityName: "Dr. Reddy Pharma Analytics",
+        customerId: firstCustomer.id,
+        amount: 1500000,
+        stage: "Proposal",
+        probability: 50,
+        expectedCloseDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000),
+        status: "Open",
+        assignedToId: manager.id,
+        notes: "Technical demo completed.",
+      },
+    ];
+
+    for (const o of seedOpps) {
+      const existing = await prisma.opportunity.findFirst({ where: { opportunityName: o.opportunityName } });
+      if (!existing) {
+        await prisma.opportunity.create({ data: o });
+      }
+    }
+  }
+
+  console.log("Seeding Follow-ups & Activities...");
+  const seedFollowUps = [
+    {
+      subject: "Q4 Renewal Discussion with TCS",
+      followUpType: "Meeting",
+      followUpDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      status: "Planned",
+      remarks: "Review contract pricing and user counts.",
+      assignedToId: sales.id,
+    },
+    {
+      subject: "Initial Requirements Call - Nykaa",
+      followUpType: "Call",
+      followUpDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // Overdue
+      status: "Planned",
+      remarks: "Discuss API integration requirements.",
+      assignedToId: sales.id,
+    },
+  ];
+
+  for (const f of seedFollowUps) {
+    const existing = await prisma.followUp.findFirst({ where: { subject: f.subject } });
+    if (!existing) {
+      await prisma.followUp.create({ data: f });
+    }
+  }
+
+  console.log("Database seed completed successfully!");
 }
 
 main()
