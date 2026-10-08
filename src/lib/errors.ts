@@ -21,6 +21,8 @@ export class AppError extends Error {
   }
 }
 
+import { ZodError } from "zod";
+
 export function formatApiError(error: any): ApiResponse {
   if (error instanceof AppError) {
     return {
@@ -29,8 +31,23 @@ export function formatApiError(error: any): ApiResponse {
       errors: error.errors,
     };
   }
+
+  if (error instanceof ZodError || error?.name === "ZodError") {
+    const issue = error.issues?.[0];
+    const message = issue ? issue.message : "Validation failed.";
+    const errors = error.issues?.map((i: any) => ({
+      field: i.path.join("."),
+      message: i.message,
+    }));
+    return {
+      status: 400,
+      message,
+      errors,
+    };
+  }
+
   return {
     status: 500,
-    message: "An unexpected system error occurred. Please try again later.",
+    message: error?.message || "An unexpected system error occurred. Please try again later.",
   };
 }
